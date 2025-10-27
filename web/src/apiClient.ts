@@ -177,6 +177,35 @@ export type GraphResponse = {
 };
 
 const APIClient = {
+  async uploadPcap(
+    file: File | Blob,
+    filename: string,
+    pcapPassword?: string | null,
+    onProgress?: (percent: number) => void,
+  ) {
+    const url = `${window.location.origin}/upload/${encodeURIComponent(
+      filename,
+    )}`;
+    const headers: Record<string, string> = {
+      "Content-Type": "application/octet-stream",
+    };
+    if (pcapPassword && pcapPassword.length > 0) {
+      // Username is ignored by backend; only password is checked
+      headers["Authorization"] = `Basic ${btoa(`pcap:${pcapPassword}`)}`;
+    }
+    await axios.request({
+      method: "post",
+      url,
+      data: file,
+      headers,
+      onUploadProgress: (e) => {
+        if (!onProgress) return;
+        if (e.total && e.total > 0) {
+          onProgress(Math.round((e.loaded * 100) / e.total));
+        }
+      },
+    });
+  },
   async searchStreams(query: string, page: number) {
     return this.performGuarded(
       "post",

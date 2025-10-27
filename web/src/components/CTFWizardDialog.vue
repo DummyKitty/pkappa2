@@ -5,13 +5,13 @@
         <span class="text-h5">CTF Setup Wizards</span>
       </v-card-title>
       <v-tabs v-model="tab" stacked color="primary">
-        <v-tab value="tab_flag_regex">
-          Setup Flag tags
-          <v-icon>mdi-flag</v-icon>
-        </v-tab>
         <v-tab value="tab_service_by_port">
           Setup Service ports
           <v-icon>mdi-cloud-outline</v-icon>
+        </v-tab>
+        <v-tab value="tab_flag_regex">
+          Setup Flag tags
+          <v-icon>mdi-flag</v-icon>
         </v-tab>
       </v-tabs>
       <v-tabs-window v-model="tab">
@@ -63,7 +63,7 @@
               <v-text-field
                 v-model="flagRegex"
                 label="Flag Regex"
-                example="flag_[a-fA-F0-9]{32}"
+                placeholder="flag\{[a-z0-9A-Z]{32}\}"
                 autofocus
                 :rules="[() => goodFlagRegex]"
               ></v-text-field>

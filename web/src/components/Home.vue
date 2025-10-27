@@ -1,271 +1,203 @@
 <template>
   <v-card>
-    <v-card-title>Help</v-card-title>
+    <v-card-title>帮助</v-card-title>
     <v-card-text>
-      This page provides a quick overview of the available filters and how to
-      use them to search for streams. You can use the search bar at the top of
-      the page to enter your query. You can use the filters to narrow down the
-      results.
+      本页提供可用过滤器的快速概览，以及如何用它们搜索数据流。你可以使用顶部搜索栏输入查询，并借助过滤器收窄结果范围。
       <br />
-      Please refer to the
+      详细教程请参考
       <a
         href="https://github.com/spq/pkappa2?tab=readme-ov-file#searching-streams"
         target="_blank"
         rel="noopener"
         >README</a
-      >
-      for a tutorial on how to search for streams and general usage
-      documentation.
+      >。
     </v-card-text>
   </v-card>
   <v-card>
-    <v-card-title>Keyboard Shortcuts</v-card-title>
+    <v-card-title>快捷键</v-card-title>
     <v-card-text>
-      <v-table>
+      <v-table class="help-table">
+        <colgroup>
+          <col style="width: 220px" />
+          <col style="width: 220px" />
+          <col />
+        </colgroup>
         <tbody>
           <tr>
-            <th>Search</th>
+            <th>搜索</th>
             <td><code>/</code></td>
-            <td>Focus the search input field.</td>
+            <td>聚焦到搜索输入框。</td>
           </tr>
           <tr>
-            <th>Scroll query history</th>
+            <th>滚动查询历史</th>
             <td><code>Arrow up / down</code></td>
             <td>
-              Scroll through query history when search input field is focussed.
+              当焦点在搜索输入框时，滚动浏览查询历史。
             </td>
           </tr>
           <tr>
-            <th>Previous Result</th>
+            <th>上一条结果</th>
             <td><code>j</code></td>
             <td>
-              On results: go to previous page. On stream details: go to previous
-              stream in the result list.
+              在结果列表：上一页。流详情页：跳到结果列表中的上一条流。
             </td>
           </tr>
           <tr>
-            <th>Next Result</th>
+            <th>下一条结果</th>
             <td><code>k</code></td>
             <td>
-              On results: go to next page. On stream details: go to next stream
-              in result list.
+              在结果列表：下一页。流详情页：跳到结果列表中的下一条流。
             </td>
           </tr>
           <tr>
-            <th>Select multiple tags</th>
-            <td><code>Shift + click on tag in sidebar</code></td>
-            <td>Add/remove multiple services/tags to the query.</td>
+            <th>多选标签</th>
+            <td><code>Shift + 点击侧边栏标签</code></td>
+            <td>在查询中添加/移除多个服务或标签。</td>
           </tr>
         </tbody>
       </v-table>
     </v-card-text>
   </v-card>
   <v-card>
-    <v-card-title>Query format</v-card-title>
+    <v-card-title>查询语法</v-card-title>
     <v-card-text>
-      <v-table>
+      <v-table class="help-table">
+        <colgroup>
+          <col style="width: 220px" />
+          <col style="width: 320px" />
+          <col />
+        </colgroup>
         <tbody>
           <tr>
-            <th>Operators</th>
+            <th>运算符</th>
             <td><code>filter&nbsp;[AND]|OR|THEN&nbsp;filter</code></td>
             <td width="100%">
-              <code>AND</code>/<code>OR</code> do what you expect.
-              <code>THEN</code> works like <code>AND</code> but makes
-              <code>[cs]data</code> filters match sequentially.
-              <code>AND</code> can be omitted.
+              <code>AND</code>/<code>OR</code> 表示与/或。
+              <code>THEN</code> 类似 <code>AND</code>，但要求 <code>[cs]data</code> 过滤器按顺序匹配。
+              <code>AND</code> 可省略。
             </td>
           </tr>
           <tr>
-            <th>Brackets</th>
+            <th>括号</th>
             <td><code>(filter)</code></td>
-            <td width="100%">Filters can be grouped in brackets.</td>
+            <td width="100%">可用括号对过滤器分组。</td>
           </tr>
           <tr>
-            <th>Negation</th>
+            <th>取反</th>
             <td><code>-filter</code></td>
-            <td width="100%">Inverts the filter.</td>
+            <td width="100%">对过滤条件取反。</td>
           </tr>
           <tr>
-            <th>Filter&nbsp;format</th>
+            <th>过滤器格式</th>
             <td>
-              <code>key:value</code>&nbsp;or&nbsp;<code>key:"value"</code>
+              <code>key:value</code>&nbsp;或&nbsp;<code>key:"value"</code>
             </td>
             <td width="100%">
-              If no special chars(e.g. space, quotes, brackets) are required,
-              format 1 can be used, otherwise use format 2, where
-              <code>"</code> can be escaped by repeating it.
+              不含空格、引号、括号等特殊字符时可用前者，否则使用带引号格式；引号通过重复来转义。
             </td>
           </tr>
           <tr>
-            <th>Sub-queries</th>
+            <th>子查询</th>
             <td><code>@name:id:123</code></td>
             <td width="100%">
-              Sub-queries are supported by prefixing any filter with
-              <code>@subquery-name:</code>.
+              在任意过滤器前添加 <code>@子查询名:</code> 即可引用子查询。
             </td>
           </tr>
           <tr>
-            <th>Variables</th>
-            <td><code>@id@</code> or <code>@subquery:ftime@</code></td>
+            <th>变量</th>
+            <td><code>@id@</code> 或 <code>@subquery:ftime@</code></td>
             <td width="100%">
-              Variables can be used within most filters. If subqueries are used,
-              referencing a variable from a different subquery is done by
-              prefixing the variablename with the subquery name and a
-              <code>:</code>.
+              多数过滤器支持变量。若引用其他子查询中的变量，需加上子查询名和 <code>:</code> 前缀。
             </td>
           </tr>
           <tr>
-            <th>Tag/Service/Mark/Generated&nbsp;filter</th>
+            <th>标签/服务/标记/生成 过滤器</th>
             <td>
-              <code>tag:tagname,othertag</code>, <code>service:svc</code>,
-              <code>mark:marked</code> or <code>generated:foo</code>
+              <code>tag:tagname,othertag</code>、<code>service:svc</code>、
+              <code>mark:marked</code> 或 <code>generated:foo</code>
             </td>
             <td width="100%">
-              Restricts the results to streams that were identified as matching
-              to the query of one of the named tags, services, generated or
-              marks. Multiple names are separated by
-              <code>,</code>.
+              将结果限制为匹配指定 标签/服务/生成/标记 的流；多个名称用 <code>,</code> 分隔。
             </td>
           </tr>
           <tr>
-            <th>Protocol&nbsp;filter</th>
+            <th>协议过滤器</th>
             <td><code>protocol:tcp,udp</code></td>
             <td width="100%">
-              Restricts the results to streams of the given protocols, supported
-              protocols are <code>tcp</code>, <code>udp</code> and
-              <code>sctp</code>, separate the protocols by <code>,</code>. This
-              filter supports the <code>protocol</code> variable, e.g.
-              <code>protocol:@subquery:protocol@</code>.
+              仅显示指定协议（<code>tcp</code>、<code>udp</code>、<code>sctp</code>）的流，多个协议用 <code>,</code> 分隔；支持变量（如 <code>protocol:@subquery:protocol@</code>）。
             </td>
           </tr>
           <tr>
-            <th>Id&nbsp;filter</th>
+            <th>ID 过滤器</th>
             <td><code>id:1,2,3,@subquery:id@+123</code></td>
             <td width="100%">
-              Restricts the results to only streams with one of the given ids.
-              You can give a list of (separate by <code>,</code>) ids or id
-              ranges (using <code>:</code>), id ranges can be open(by leaving
-              out the number) at any side. Any of these variables, optionally
-              from subqueries, can be used: <code>id</code>,
-              <code>[cs]port</code>, <code>[cs]bytes</code>. Simple calculations
-              can be performed, using the operators <code>+</code> and
-              <code>-</code>.
+              仅显示给定 ID 的流；可提供以 <code>,</code> 分隔的 ID 列表，或使用 <code>:</code> 表示的区间（任一端可留空表示开区间）。
+              可使用（含子查询的）变量 <code>id</code>、<code>[cs]port</code>、<code>[cs]bytes</code>，并支持 <code>+</code>/<code>-</code> 简单计算。
             </td>
           </tr>
           <tr>
-            <th>Port&nbsp;filter</th>
+            <th>端口过滤器</th>
             <td><code>[cs]port:80,1024:,</code></td>
             <td width="100%">
-              <code>cport</code>, <code>sport</code> and
-              <code>port</code> filter on the client, server or any port. The
-              syntax is identical to the <code>id</code> filter syntax.
+              <code>cport</code>（客户端）、<code>sport</code>（服务端）或 <code>port</code>（任意）按端口过滤，语法与 <code>id</code> 过滤器一致。
             </td>
           </tr>
           <tr>
-            <th>Bytes&nbsp;filter</th>
+            <th>字节数过滤器</th>
             <td><code>[cs]bytes:1337,2048:4096</code></td>
             <td width="100%">
-              <code>cbytes</code>, <code>sbytes</code> and
-              <code>bytes</code> filter on the number of bytes send by the
-              client, server or any of them. The syntax is identical to the
-              <code>id</code> filter syntax.
+              <code>cbytes</code>、<code>sbytes</code>、<code>bytes</code> 按客户端/服务端/任意方向发送的字节数过滤，语法与 <code>id</code> 相同。
             </td>
           </tr>
           <tr>
-            <th>Host&nbsp;filter</th>
+            <th>主机过滤器</th>
             <td>
               <code>[cs]host:1.2.3.4,10.0.0.0/8,::1,10.0.0.1/8/-8</code>
             </td>
             <td width="100%">
-              <code>chost</code>, <code>shost</code> and
-              <code>host</code> filter on the client, server or any host, lists
-              are supported, each entry consists of an ip-address or a variable
-              (e.g. <code>@subquery:[cs]host@</code>). Optionally, one or more
-              <code>/bits</code> suffixes are appended. The suffixes can be
-              negative, <code>/16/-8</code> would make a
-              <code>255.255.0.255</code>/<code>ffff::ff</code> netmask.
+              <code>chost</code>、<code>shost</code>、<code>host</code> 分别按客户端/服务端/任意主机过滤；支持列表。每一项可以是 IP 或变量（如 <code>@subquery:[cs]host@</code>）。可附加一个或多个 <code>/bits</code> 后缀，支持负数位，例如 <code>/16/-8</code>。
             </td>
           </tr>
           <tr>
-            <th>Time&nbsp;filter</th>
+            <th>时间过滤器</th>
             <td>
               <code>[fl]time:-1h:,1300:1400,@subquery:ftime@-5m:</code>
             </td>
             <td width="100%">
-              Filters to streams with the first(<code>ftime</code>),
-              last(<code>ltime</code>) or any(<code>time</code>) packet being in
-              the given timeranges. Lists are supported, you can use open ranges
-              where each side of the range is either a relative time from now
-              (e.g.
-              <code>-2h3m4s</code>) or an absolute time using the format
-              <code>[YYYY-MM-DD ]HHMM[SS]</code>.
-              <code>[fl]time</code> variables can be used as well as simple
-              calculations using <code>+</code> and <code>-</code>. For finding
-              streams that lasted 5 minutes or longer you could e.g. use
-              <code>ltime:@ftime@+5m:</code>.
+              按首包（<code>ftime</code>）、末包（<code>ltime</code>）或任意包（<code>time</code>）所在时间范围过滤。支持列表与开区间；区间端点可为相对时间（如 <code>-2h3m4s</code>）或绝对时间（格式 <code>[YYYY-MM-DD ]HHMM[SS]</code>）。支持 <code>[fl]time</code> 变量及 <code>+</code>/<code>-</code> 计算，例如查找持续 ≥5 分钟可用 <code>ltime:@ftime@+5m:</code>。
             </td>
           </tr>
           <tr>
-            <th>Data&nbsp;filter</th>
+            <th>数据过滤器</th>
             <td><code>[cs]data[.converter]:flag[{}].+[}]</code></td>
             <td width="100%">
-              Select streams that contain the given regex in the data send by
-              the client(<code>cdata</code>), server(<code>sdata</code>) or any
-              of them(<code>data</code>). The regex format is described here:
+              在客户端（<code>cdata</code>）、服务端（<code>sdata</code>）或任意方向（<code>data</code>）的数据中匹配正则。正则语法参考
               <a
                 href="https://golang.org/pkg/regexp/syntax/#hdr-Syntax"
                 target="_blank"
-                >Golang regexp syntax</a
-              >. Within one set of <code>then</code>-connected data filters, you
-              can use variables referencing named capture groups from previous
-              data filters of the same set. Example:
-              <code
-                >cdata:"(?P&lt;flag&gt;FLAG:[0-9a-f]{16})" then
-                cdata:"@flag@"</code
-              >. One set of <code>then</code>-connected
-              <code>data</code> filters must belong to the same sub-query. A
-              data filter can reference variables generated by sub queries that
-              are <code>and</code> connected. E.g.
-              <code
-                >@sub:cdata:"the flag is (?P&lt;flag&gt;[0-9a-f]{16})"
-                sdata:"@sub:flag@"</code
-              >. You can optionally specify the converter whose output is
-              searched for the regex. The converter name is specified after the
-              <code>.</code> and omitting the converter name causes the regex to
-              be applied to the raw stream data as well as to the output of all
-              converters attached to a stream. Setting the converter name to
-              <code>none</code> causes the regex to be applied to the raw stream
-              data only.
+                >Golang 正则语法</a
+              >。在同一组由 <code>then</code> 连接的 data 过滤器中，可引用之前命名捕获组生成的变量；也可在 <code>and</code> 连接的场景中引用其他子查询变量。可选在 <code>.</code> 后指定转换器名；省略则对原始数据及所有附加转换器输出同时匹配；设置为 <code>none</code> 则仅对原始数据匹配。
             </td>
           </tr>
           <tr>
-            <th>Sorting</th>
+            <th>排序</th>
             <td><code>sort:saddr,ftime,-id</code></td>
             <td width="100%">
-              Results can be sorted by using the
-              <code>sort</code> "filter". It may only appear once in the query,
-              the value is a list of <code>,</code> separated terms with an
-              optional <code>-</code> prefix inverting the sort order of that
-              term. Available terms are: <code>id</code>, <code>[fl]time</code>,
-              <code>[cs]bytes</code>, <code>[cs]host</code> and
-              <code>[cs]port</code>. The default is <code>-ftime</code>.
+              使用 <code>sort</code> 可以为结果排序（查询中仅出现一次）。值为以 <code>,</code> 分隔的字段列表，字段前加 <code>-</code> 表示倒序。可用字段：<code>id</code>、<code>[fl]time</code>、<code>[cs]bytes</code>、<code>[cs]host</code>、<code>[cs]port</code>；默认 <code>-ftime</code>。
             </td>
           </tr>
           <tr>
-            <th>Limiting&nbsp;result&nbsp;count</th>
+            <th>限制结果数量</th>
             <td><code>limit:10</code></td>
             <td width="100%">
-              <code>limit</code> is used to restrict the number of results, it
-              only accepts a number as value, the default is <code>100</code>,
-              the value <code>0</code> means unlimited.
+              <code>limit</code> 限制返回的结果数量（仅数字）。默认 <code>100</code>，<code>0</code> 表示不限制。
             </td>
           </tr>
           <tr>
-            <th>Grouping</th>
+            <th>分组</th>
             <td><code>group:"@sport@"</code></td>
             <td width="100%">
-              Group the results by the variables listed in the arguments.
-              Currently sub-query variables are not supported.
+              按参数中的变量对结果分组。目前不支持子查询变量。
             </td>
           </tr>
         </tbody>
@@ -275,3 +207,17 @@
 </template>
 
 <script lang="ts" setup></script>
+
+<style scoped>
+.help-table :deep(table) {
+  table-layout: fixed;
+}
+.help-table :deep(th),
+.help-table :deep(td) {
+  vertical-align: top;
+  word-break: break-word;
+}
+.help-table :deep(code) {
+  white-space: pre-wrap;
+}
+</style>

@@ -75,7 +75,7 @@
         >
           <v-btn variant="text" value="-5m:">Limit to last 5m</v-btn>
           <v-btn variant="text" value="-1h:">Limit to last 1h</v-btn>
-        </v-btn-toggle>
+        </v-btn-toggle>  
       </v-card>
     </v-menu>
     <v-menu
