@@ -2703,3 +2703,123 @@ func (mgr *Manager) Listen() (chan Event, func()) {
 		}
 	}
 }
+
+// ResetAll deletes all uploaded pcaps and removes all parsed streams and indexes.
+// It clears builder state, index readers, snapshot/state files and converter caches.
+func (mgr *Manager) ResetAll() error {
+	c := make(chan error)
+	mgr.jobs <- func() {
+		err := func() error {
+			// stop any queued imports
+			mgr.importJobs = nil
+
+			// release and delete current indexes
+			if len(mgr.indexes) != 0 {
+				rel := indexReleaser(mgr.indexes)
+				rel.release(mgr)
+			}
+			mgr.indexes = nil
+			mgr.usedIndexes = make(map[*index.Reader]uint)
+			mgr.nStreamRecords = 0
+			mgr.nPacketRecords = 0
+			mgr.nextStreamID = 0
+			mgr.nUnmergeableIndexes = 0
+			mgr.allStreams = bitmask.LongBitmask{}
+
+			// clear tag matches/uncertainty
+			for name, t := range mgr.tags {
+				tt := *t
+				tt.Matches = bitmask.LongBitmask{}
+				tt.Uncertain = bitmask.LongBitmask{}
+				mgr.tags[name] = &tt
+			}
+
+			// reset converter caches
+			for _, conv := range mgr.converters {
+				if err := conv.Reset(); err != nil {
+					log.Printf("failed to reset converter %q: %v", conv.Name(), err)
+				}
+			}
+
+			// delete files on disk
+			// pcaps
+			if entries, err := os.ReadDir(mgr.PcapDir); err == nil {
+				for _, e := range entries {
+					if e.IsDir() {
+						continue
+					}
+					n := e.Name()
+					if strings.HasSuffix(n, ".pcap") || strings.HasSuffix(n, ".pcapng") {
+						_ = os.Remove(filepath.Join(mgr.PcapDir, n))
+					}
+				}
+			}
+			// indexes and converter caches
+			if entries, err := os.ReadDir(mgr.IndexDir); err == nil {
+				for _, e := range entries {
+					if e.IsDir() {
+						continue
+					}
+					n := e.Name()
+					if strings.HasSuffix(n, ".idx") {
+						_ = os.Remove(filepath.Join(mgr.IndexDir, n))
+					}
+				}
+			}
+			// snapshots
+			if entries, err := os.ReadDir(mgr.SnapshotDir); err == nil {
+				for _, e := range entries {
+					if e.IsDir() {
+						continue
+					}
+					n := e.Name()
+					if strings.HasSuffix(n, ".snap") {
+						_ = os.Remove(filepath.Join(mgr.SnapshotDir, n))
+					}
+				}
+			}
+			// state files
+			if entries, err := os.ReadDir(mgr.StateDir); err == nil {
+				for _, e := range entries {
+					if e.IsDir() {
+						continue
+					}
+					n := e.Name()
+					if strings.HasSuffix(n, "state.json") {
+						_ = os.Remove(filepath.Join(mgr.StateDir, n))
+					}
+				}
+			}
+
+			// re-init builder
+			b, err := builder.New(mgr.PcapDir, mgr.IndexDir, mgr.SnapshotDir, nil)
+			if err != nil {
+				return err
+			}
+			mgr.builder = b
+
+			// save clean state
+			if err := mgr.saveState(); err != nil {
+				log.Printf("reset: unable to save state: %v", err)
+			}
+
+			// notify listeners with updated stats
+			mgr.event(Event{
+				Type: "pcapProcessed",
+				PcapStats: &PcapStatistics{
+					PcapCount:         0,
+					ImportJobCount:    0,
+					StreamCount:       0,
+					PacketCount:       0,
+					IndexCount:        0,
+					StreamRecordCount: 0,
+					PacketRecordCount: 0,
+				},
+			})
+			return nil
+		}()
+		c <- err
+		close(c)
+	}
+	return <-c
+}

@@ -243,6 +243,9 @@ const APIClient = {
   async getPcaps() {
     return this.performGuarded("get", `/pcaps.json`, isPcapsResponse);
   },
+  async clearPcapsAndStreams() {
+    return this.perform("delete", `/pcaps`);
+  },
   async getPcapOverIPEndpoints() {
     return this.performGuarded("get", `/pcap-over-ip`, isPcapOverIPResponse);
   },

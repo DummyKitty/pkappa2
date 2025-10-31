@@ -63,7 +63,7 @@
               <v-text-field
                 v-model="flagRegex"
                 label="Flag Regex"
-                placeholder="flag\{[a-z0-9A-Z]{32}\}"
+                placeholder="flag\\{[a-zA-Z0-9]{40}\\}"
                 autofocus
                 :rules="[() => goodFlagRegex]"
               ></v-text-field>
@@ -100,7 +100,7 @@ const tab = ref("");
 
 const flag_regex_loading = ref(false);
 const flag_regex_error = ref(false);
-const flagRegex = ref("");
+const flagRegex = ref("flag\\{[a-zA-Z0-9]{40}\\}");
 
 const service_by_port_loading = ref(false);
 const service_by_port_error = ref(false);

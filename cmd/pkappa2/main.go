@@ -507,6 +507,12 @@ func main() {
 			}
 		}
 	})
+	rUser.Delete("/api/pcaps", func(w http.ResponseWriter, r *http.Request) {
+		if err := mgr.ResetAll(); err != nil {
+			http.Error(w, fmt.Sprintf("reset failed: %v", err), http.StatusInternalServerError)
+			return
+		}
+	})
 	rUser.Get(`/api/stream/{stream:\d+}.json`, func(w http.ResponseWriter, r *http.Request) {
 		streamIDStr := chi.URLParam(r, "stream")
 		streamID, err := strconv.ParseUint(streamIDStr, 10, 64)

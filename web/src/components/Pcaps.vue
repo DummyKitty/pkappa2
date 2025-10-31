@@ -1,9 +1,17 @@
 <template>
-  <div>
+  <div
+    @dragover.prevent="onDragOver"
+    @dragleave.prevent="onDragLeave"
+    @drop.prevent="onDrop"
+  >
     <v-card density="compact" variant="flat">
       <v-card-title class="d-flex align-center justify-space-between">
         <span>Processed PCAPs</span>
         <div class="d-flex ga-2">
+          <v-btn color="error" density="comfortable" @click="openClearDialog">
+            <v-icon start>mdi-delete</v-icon>
+            Clear All
+          </v-btn>
           <v-btn :loading="refreshing" density="comfortable" color="secondary" @click="refreshPcaps">
             <v-icon start>mdi-refresh</v-icon>
             Refresh
@@ -15,6 +23,16 @@
         </div>
       </v-card-title>
     </v-card>
+    <v-expand-transition>
+      <v-alert
+        v-if="dragOver"
+        type="info"
+        variant="outlined"
+        class="mb-2"
+      >
+        Drop .pcap/.pcapng files here to upload (multiple supported)
+      </v-alert>
+    </v-expand-transition>
     <v-data-table
       :headers="headers"
       :items="store.pcaps || []"
@@ -111,6 +129,21 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <v-dialog v-model="clearDialog" max-width="520">
+      <v-card>
+        <v-card-title>Confirm Clear</v-card-title>
+        <v-card-text>
+          <v-alert type="warning" variant="tonal" class="mb-4"
+            >This will permanently delete all uploaded PCAP files and all parsed Streams. This action cannot be undone.</v-alert
+          >
+          Are you sure you want to continue?
+        </v-card-text>
+        <v-card-actions class="justify-end">
+          <v-btn :disabled="clearing" variant="text" @click="closeClearDialog">Cancel</v-btn>
+          <v-btn color="error" :loading="clearing" @click="confirmClear">Delete All</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -168,6 +201,9 @@ onMounted(() => {
 
 const uploadDialog = ref(false);
 const refreshing = ref(false);
+const clearDialog = ref(false);
+const clearing = ref(false);
+const dragOver = ref(false);
 const selectedFile = ref<File | null>(null);
 const targetFilename = ref<string>("");
 const pcapPassword = ref<string>("");
@@ -196,6 +232,15 @@ function closeUploadDialog() {
   pcapPassword.value = "";
   progress.value = 0;
   uploadError.value = null;
+}
+
+function openClearDialog() {
+  clearDialog.value = true;
+}
+
+function closeClearDialog() {
+  if (clearing.value) return;
+  clearDialog.value = false;
 }
 
 function onFileChange() {
@@ -254,6 +299,69 @@ async function refreshPcaps() {
   } finally {
     refreshing.value = false;
   }
+}
+
+async function confirmClear() {
+  if (clearing.value) return;
+  clearing.value = true;
+  try {
+    await APIClient.clearPcapsAndStreams();
+    EventBus.emit("showMessage", "Cleared all PCAPs and Streams.");
+    await Promise.all([store.updatePcaps(), store.updateStatus()]);
+  } catch (e: unknown) {
+    const message =
+      typeof e === "object" && e !== null && "message" in e
+        ? String((e as { message: unknown }).message)
+        : String(e);
+    EventBus.emit("showError", `Failed to clear: ${message}`);
+  } finally {
+    clearing.value = false;
+    clearDialog.value = false;
+  }
+}
+
+function onDragOver(e: DragEvent) {
+  if (!e.dataTransfer) return;
+  e.dataTransfer.dropEffect = "copy";
+  dragOver.value = true;
+}
+
+function onDragLeave() {
+  dragOver.value = false;
+}
+
+async function onDrop(e: DragEvent) {
+  dragOver.value = false;
+  const files = Array.from(e.dataTransfer?.files || []);
+  if (files.length === 0) return;
+  const accepted: File[] = [];
+  const rejected: string[] = [];
+  for (const f of files) {
+    if (/\.(pcap|pcapng)$/i.test(f.name)) accepted.push(f);
+    else rejected.push(f.name);
+  }
+  if (rejected.length) {
+    EventBus.emit(
+      "showError",
+      `Unsupported files skipped: ${rejected.slice(0, 5).join(", ")}${
+        rejected.length > 5 ? ` and ${rejected.length - 5} more` : ""
+      }`,
+    );
+  }
+  if (accepted.length === 0) return;
+  for (const f of accepted) {
+    try {
+      await APIClient.uploadPcap(f, f.name);
+      EventBus.emit("showMessage", `Uploaded ${f.name} successfully.`);
+    } catch (err: unknown) {
+      const message =
+        typeof err === "object" && err !== null && "message" in err
+          ? String((err as { message: unknown }).message)
+          : String(err);
+      EventBus.emit("showError", `Failed to upload ${f.name}: ${message}`);
+    }
+  }
+  await store.updatePcaps();
 }
 </script>
 
