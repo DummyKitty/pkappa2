@@ -1,9 +1,5 @@
 <template>
-  <div
-    @dragover.prevent="onDragOver"
-    @dragleave.prevent="onDragLeave"
-    @drop.prevent="onDrop"
-  >
+  <div>
     <v-card density="compact" variant="flat">
       <v-card-title class="d-flex align-center justify-space-between">
         <span>Processed PCAPs</span>
@@ -23,16 +19,7 @@
         </div>
       </v-card-title>
     </v-card>
-    <v-expand-transition>
-      <v-alert
-        v-if="dragOver"
-        type="info"
-        variant="outlined"
-        class="mb-2"
-      >
-        Drop .pcap/.pcapng files here to upload (multiple supported)
-      </v-alert>
-    </v-expand-transition>
+    
     <v-data-table
       :headers="headers"
       :items="store.pcaps || []"
@@ -144,6 +131,79 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    
+    <!-- Batch upload area -->
+    <v-card class="mt-4" variant="tonal">
+      <v-card-title>Batch Upload</v-card-title>
+      <v-card-text>
+        <div
+          class="batch-dropzone"
+          :class="{ 'batch-dropzone--active': batchDragging }"
+          @dragover.prevent="onBatchDragOver"
+          @dragleave.prevent="onBatchDragLeave"
+          @drop.prevent="onBatchDrop"
+          @click="openBatchFilePicker"
+        >
+          <v-icon size="36">mdi-tray-arrow-up</v-icon>
+          <div class="text-body-1 mt-2">Drop .pcap/.pcapng files here, or click to select</div>
+          <div class="text-caption opacity-70">Multiple files supported</div>
+          <input
+            ref="batchFileInput"
+            type="file"
+            accept=".pcap,.pcapng,application/vnd.tcpdump.pcap,application/octet-stream"
+            multiple
+            class="d-none"
+            @change="onBatchFilePicked"
+          />
+        </div>
+
+        <div v-if="queuedFiles.length > 0" class="mt-4">
+          <div class="text-subtitle-2 mb-2">Selected files ({{ queuedFiles.length }})</div>
+          <v-table density="compact">
+            <tbody>
+              <tr v-for="f in queuedFiles" :key="f.name + ':' + f.size">
+                <td class="py-2">{{ f.name }}</td>
+                <td class="py-2 text-no-wrap">
+                  {{ prettyBytes(f.size, { maximumFractionDigits: 1, binary: true }) }}
+                </td>
+                <td class="py-2 text-right w0">
+                  <v-btn icon density="comfortable" variant="text" @click="removeQueuedFile(f)">
+                    <v-icon>mdi-close</v-icon>
+                  </v-btn>
+                </td>
+              </tr>
+            </tbody>
+          </v-table>
+
+          <div class="d-flex align-center ga-2 mt-3">
+            <v-text-field
+              v-model="pcapPassword"
+              label="PCAP upload password (optional)"
+              type="password"
+              density="comfortable"
+              prepend-inner-icon="mdi-lock"
+              class="flex-grow-1"
+            />
+            <v-btn :disabled="batchUploading || queuedFiles.length === 0" variant="text" @click="clearQueued">
+              Clear
+            </v-btn>
+            <v-btn color="primary" :loading="batchUploading" :disabled="queuedFiles.length === 0" @click="uploadBatch">
+              Upload {{ queuedFiles.length }} file(s)
+            </v-btn>
+          </div>
+
+          <v-progress-linear
+            v-if="batchUploading"
+            :model-value="batchProgress"
+            height="6"
+            color="primary"
+            class="mt-2"
+            striped
+            rounded
+          />
+        </div>
+      </v-card-text>
+    </v-card>
   </div>
 </template>
 
@@ -203,7 +263,13 @@ const uploadDialog = ref(false);
 const refreshing = ref(false);
 const clearDialog = ref(false);
 const clearing = ref(false);
-const dragOver = ref(false);
+// batch upload states
+const batchDragging = ref(false);
+const batchFileInput = ref<HTMLInputElement | null>(null);
+const queuedFiles = ref<File[]>([]);
+const batchUploading = ref(false);
+const uploadedCount = ref(0);
+const batchProgress = ref(0);
 const selectedFile = ref<File | null>(null);
 const targetFilename = ref<string>("");
 const pcapPassword = ref<string>("");
@@ -320,20 +386,32 @@ async function confirmClear() {
   }
 }
 
-function onDragOver(e: DragEvent) {
+function onBatchDragOver(e: DragEvent) {
   if (!e.dataTransfer) return;
-  e.dataTransfer.dropEffect = "copy";
-  dragOver.value = true;
+  const types = e.dataTransfer.types;
+  if (types && Array.from(types).includes("Files")) {
+    e.dataTransfer.dropEffect = "copy";
+    batchDragging.value = true;
+  }
 }
-
-function onDragLeave() {
-  dragOver.value = false;
+function onBatchDragLeave() {
+  batchDragging.value = false;
 }
-
-async function onDrop(e: DragEvent) {
-  dragOver.value = false;
+function onBatchDrop(e: DragEvent) {
+  batchDragging.value = false;
   const files = Array.from(e.dataTransfer?.files || []);
-  if (files.length === 0) return;
+  addFilesToQueue(files);
+}
+function openBatchFilePicker() {
+  batchFileInput.value?.click();
+}
+function onBatchFilePicked(ev: Event) {
+  const input = ev.target as HTMLInputElement;
+  const files = Array.from(input.files || []);
+  addFilesToQueue(files);
+  if (input) input.value = "";
+}
+function addFilesToQueue(files: File[]) {
   const accepted: File[] = [];
   const rejected: string[] = [];
   for (const f of files) {
@@ -349,24 +427,82 @@ async function onDrop(e: DragEvent) {
     );
   }
   if (accepted.length === 0) return;
+  const existing = new Set(queuedFiles.value.map((f) => `${f.name}:${f.size}`));
   for (const f of accepted) {
-    try {
-      await APIClient.uploadPcap(f, f.name);
-      EventBus.emit("showMessage", `Uploaded ${f.name} successfully.`);
-    } catch (err: unknown) {
-      const message =
-        typeof err === "object" && err !== null && "message" in err
-          ? String((err as { message: unknown }).message)
-          : String(err);
-      EventBus.emit("showError", `Failed to upload ${f.name}: ${message}`);
-    }
+    const key = `${f.name}:${f.size}`;
+    if (!existing.has(key)) queuedFiles.value.push(f);
   }
-  await store.updatePcaps();
 }
+function removeQueuedFile(file: File) {
+  queuedFiles.value = queuedFiles.value.filter((f) => !(f.name === file.name && f.size === file.size));
+}
+function clearQueued() {
+  queuedFiles.value = [];
+}
+async function uploadBatch() {
+  if (queuedFiles.value.length === 0 || batchUploading.value) return;
+  batchUploading.value = true;
+  uploadedCount.value = 0;
+  batchProgress.value = 0;
+  const files = [...queuedFiles.value];
+  try {
+    for (const f of files) {
+      try {
+        await APIClient.uploadPcap(
+          f,
+          f.name,
+          pcapPassword.value || undefined,
+          (p) => {
+            batchProgress.value = Math.round(
+              ((uploadedCount.value + p / 100) / files.length) * 100,
+            );
+          },
+        );
+        uploadedCount.value++;
+        batchProgress.value = Math.round((uploadedCount.value / files.length) * 100);
+        queuedFiles.value = queuedFiles.value.filter((existing) => existing !== f);
+      } catch (err: unknown) {
+        const message =
+          typeof err === "object" && err !== null && "message" in err
+            ? String((err as { message: unknown }).message)
+            : String(err);
+        if ((/401/.test(message) || /Unauthorized/i.test(message)) && !showPasswordField.value) {
+          showPasswordField.value = true;
+          EventBus.emit("showError", "Unauthorized: Please provide upload password and try again.");
+          break;
+        }
+        EventBus.emit("showError", `Failed to upload ${f.name}: ${message}`);
+      }
+    }
+    if (uploadedCount.value > 0) {
+      await Promise.all([refreshPcaps(), store.updateStatus()]);
+      EventBus.emit("showMessage", `Uploaded ${uploadedCount.value} file(s).`);
+    }
+  } finally {
+    batchUploading.value = false;
+    batchProgress.value = 0;
+    uploadedCount.value = 0;
+  }
+}
+
+ 
 </script>
 
 <style scoped>
 .w0 {
   width: 0;
 }
+.batch-dropzone {
+  border: 2px dashed rgba(25, 118, 210, 0.6);
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+.batch-dropzone--active {
+  background-color: rgba(25, 118, 210, 0.06);
+  border-color: rgba(25, 118, 210, 0.9);
+}
+.opacity-70 { opacity: 0.7; }
 </style>
