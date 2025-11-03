@@ -255,6 +255,11 @@
 }
 .help-table :deep(code) {
   white-space: pre-wrap;
+  user-select: text;
+}
+.help-table :deep(th),
+.help-table :deep(td) {
+  user-select: text;
 }
 </style>
 
