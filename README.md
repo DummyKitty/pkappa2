@@ -13,7 +13,7 @@ Streams matching the query are displayed, and their content can be viewed in mul
 
 Add pcaps using a POST request to `/upload/filename.pcap`. Make sure the filename is unique.
 ```
-curl --data-binary @some-file.pcap http://localhost:8080/upload/some-file.pcap
+curl --data-binary @some-file.pcap http://localhost:9090/upload/some-file.pcap
 ```
 
 ## Features
@@ -93,7 +93,7 @@ $ cp .env.example .env
 # modify settings in .env file. specify HTTP basic auth passwords etc.
 $ docker compose up -d
 ```
-Open http://localhost:8080/ to access the web interface.
+Open http://localhost:9090/ to access the web interface.
 The `converters` folder is mapped into the container for you to tweak.
 You can modify the `docker-compose.yml` file and uncomment the `./pcaps_incoming` volume bind mount to allow to ingest pcaps by moving them into the mounted directory.
 All command line options can be specified using environment variables.
@@ -107,7 +107,7 @@ All command line options can be specified using environment variables.
     - Optionally, install stock converter python dependencies: `pip install -r converters/pkappa2lib/requirements.txt`
     - Only required to use the converter views
 - Run `go run cmd/pkappa2/main.go` in `/`
-- Visit http://localhost:8080/ in your web browser
+- Visit http://localhost:9090/ in your web browser
 
 You likely want to add some arguments to the `go run` command, check `-help`
 
@@ -128,7 +128,7 @@ server {
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_pass http://127.0.0.1:8080/;
+            proxy_pass http://127.0.0.1:9090/;
     }
     location /ws {
             proxy_http_version 1.1;
@@ -138,7 +138,7 @@ server {
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_pass http://127.0.0.1:8080/ws;
+            proxy_pass http://127.0.0.1:9090/ws;
     }
 }
 ```
@@ -146,7 +146,7 @@ server {
 There are multiple ways to tell pkappa2 about network traffic you want to be able to search in:
 
 1. Sending a POST request to the `/upload/[filename.pcap]` endpoint
-    - `curl --data-binary @some-file.pcap http://localhost:8080/upload/some-file.pcap`
+    - `curl --data-binary @some-file.pcap http://localhost:9090/upload/some-file.pcap`
 2. Monitor a folder for new `.pcap*` files and ingest them automatically once they appear
     - By setting the `-watch_dir /some/path` commandline option or `PKAPPA2_WATCH_DIR` environment variable
 3. Streaming packets over TCP using PCAP-over-IP
@@ -197,13 +197,13 @@ Add the `localhost:4200` endpoint in pkappa2 on the `Manage PCAP-over-IP` page a
 
 - Build the frontend once (`yarn build`) to be able to run pkappa2
 - Run `yarn dev` in `/web`
-- Run `go run cmd/pkappa2/main.go -address :8081` in `/`
-- Visit http://localhost:8080/ in your web browser
+- Run `go run cmd/pkappa2/main.go` (defaults to `:9090`) in `/`
+- Visit http://localhost:9090/ in your web browser
 - Enjoy frontend development using hot-reloading changes
 - Use `yarn lint && yarn type-check && yarn format` before commiting your changes
 
 You can import multiple .pcap files in the current folder using:
-`for f in *.pcap; do curl --data-binary "@$f" "http://localhost:8081/upload/$f"; done`
+`for f in *.pcap; do curl --data-binary "@$f" "http://localhost:9090/upload/$f"; done`
 
 ### Generating type guards
 

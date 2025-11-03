@@ -290,14 +290,14 @@ function openUploadDialog() {
   progress.value = 0;
 }
 
-function closeUploadDialog() {
-  if (uploading.value) return;
+function closeUploadDialog(force = false) {
+  if (uploading.value && !force) return;
   uploadDialog.value = false;
   selectedFile.value = null;
   targetFilename.value = "";
-  pcapPassword.value = "";
   progress.value = 0;
   uploadError.value = null;
+  showPasswordField.value = false;
 }
 
 function openClearDialog() {
@@ -333,8 +333,9 @@ async function startUpload() {
       (p) => (progress.value = p),
     );
     EventBus.emit("showMessage", `Uploaded ${filename} successfully.`);
-    closeUploadDialog();
-    await store.updatePcaps();
+    uploading.value = false;
+    closeUploadDialog(true);
+    await Promise.all([refreshPcaps(), store.updateStatus()]);
   } catch (e: unknown) {
     const message =
       typeof e === "object" && e !== null && "message" in e
@@ -348,6 +349,7 @@ async function startUpload() {
     EventBus.emit("showError", `Failed to upload pcap: ${uploadError.value}`);
   } finally {
     uploading.value = false;
+    progress.value = 0;
   }
 }
 
@@ -445,6 +447,7 @@ async function uploadBatch() {
   uploadedCount.value = 0;
   batchProgress.value = 0;
   const files = [...queuedFiles.value];
+  let encounteredError = false;
   try {
     for (const f of files) {
       try {
@@ -472,15 +475,26 @@ async function uploadBatch() {
           break;
         }
         EventBus.emit("showError", `Failed to upload ${f.name}: ${message}`);
+        encounteredError = true;
       }
     }
-    if (uploadedCount.value > 0) {
-      await Promise.all([refreshPcaps(), store.updateStatus()]);
-      EventBus.emit("showMessage", `Uploaded ${uploadedCount.value} file(s).`);
-    }
   } finally {
+    const uploaded = uploadedCount.value;
     batchUploading.value = false;
-    batchProgress.value = 0;
+    if (uploaded > 0) {
+      if (!encounteredError && queuedFiles.value.length === 0) {
+        batchProgress.value = 100;
+      }
+      await Promise.all([refreshPcaps(), store.updateStatus()]);
+      EventBus.emit("showMessage", `Uploaded ${uploaded} file(s).`);
+    }
+    if (!encounteredError && queuedFiles.value.length === 0) {
+      window.setTimeout(() => {
+        batchProgress.value = 0;
+      }, 300);
+    } else {
+      batchProgress.value = Math.round((uploaded / (files.length || 1)) * 100);
+    }
     uploadedCount.value = 0;
   }
 }
