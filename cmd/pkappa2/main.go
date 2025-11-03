@@ -1,15 +1,16 @@
 package main
 
 import (
-    "bytes"
-    "bufio"
-    "container/ring"
+	"bufio"
+	"bytes"
+	"container/ring"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -61,6 +62,71 @@ var (
 
 	startupCpuprofile = flag.String("startup_cpuprofile", "", "write cpu profile to file")
 )
+
+var httpMethods = map[string]struct{}{
+	http.MethodGet:     {},
+	http.MethodHead:    {},
+	http.MethodPost:    {},
+	http.MethodPut:     {},
+	http.MethodPatch:   {},
+	http.MethodDelete:  {},
+	http.MethodOptions: {},
+	http.MethodTrace:   {},
+	http.MethodConnect: {},
+}
+
+func isHTTPMethod(method string) bool {
+	_, ok := httpMethods[method]
+	return ok
+}
+
+func extractHTTPRequestInfo(chunks []index.Data, stream *index.Stream) (string, string) {
+	buffer := make([]byte, 0, 8192)
+	for _, chunk := range chunks {
+		if chunk.Direction != index.DirectionClientToServer || len(chunk.Content) == 0 {
+			continue
+		}
+		buffer = append(buffer, chunk.Content...)
+		if len(buffer) >= 8192 || bytes.Contains(buffer, []byte("\r\n\r\n")) || bytes.Contains(buffer, []byte("\n\n")) {
+			break
+		}
+	}
+	if len(buffer) == 0 {
+		return "", ""
+	}
+	if len(buffer) > 8192 {
+		buffer = buffer[:8192]
+	}
+	lineEnd := bytes.Index(buffer, []byte("\r\n"))
+	if lineEnd == -1 {
+		lineEnd = bytes.IndexByte(buffer, '\n')
+	}
+	line := buffer
+	if lineEnd != -1 {
+		line = buffer[:lineEnd]
+	}
+	fields := bytes.Fields(line)
+	if len(fields) < 2 {
+		if stream != nil {
+			return stream.Protocol(), ""
+		}
+		return "", ""
+	}
+	method := string(fields[0])
+	if !isHTTPMethod(method) {
+		if stream != nil {
+			return stream.Protocol(), ""
+		}
+		return "", ""
+	}
+	target := string(fields[1])
+	if parsed, err := url.Parse(target); err == nil {
+		if uri := parsed.RequestURI(); uri != "" {
+			target = uri
+		}
+	}
+	return method, target
+}
 
 func main() {
 	// parse environment variables and if given, set as default values for flags
@@ -567,6 +633,7 @@ func main() {
 			http.Error(w, fmt.Sprintf("AllTags() failed: %v", err), http.StatusInternalServerError)
 			return
 		}
+		requestMethod, requestURL := extractHTTPRequestInfo(data, streamContext.Stream())
 		// TODO: Send correct ClientBytes and ServerBytes when sending converter output.
 		response := struct {
 			Stream          *index.Stream
@@ -574,12 +641,16 @@ func main() {
 			Tags            []string
 			Converters      []string
 			ActiveConverter string
+			RequestMethod   string `json:",omitempty"`
+			RequestURL      string `json:",omitempty"`
 		}{
 			Stream:          streamContext.Stream(),
 			Data:            data,
 			Tags:            tags,
 			Converters:      converters,
 			ActiveConverter: converter,
+			RequestMethod:   requestMethod,
+			RequestURL:      requestURL,
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -621,8 +692,10 @@ func main() {
 		response := struct {
 			Debug   []string
 			Results []struct {
-				Stream *index.Stream
-				Tags   []string
+				Stream        *index.Stream
+				Tags          []string
+				RequestMethod string
+				RequestURL    string
 			}
 			Elapsed     int64
 			Offset      uint
@@ -634,8 +707,10 @@ func main() {
 		}{
 			Debug: qq.Debug,
 			Results: []struct {
-				Stream *index.Stream
-				Tags   []string
+				Stream        *index.Stream
+				Tags          []string
+				RequestMethod string
+				RequestURL    string
 			}{},
 		}
 		start := time.Now()
@@ -646,12 +721,27 @@ func main() {
 			if err != nil {
 				return err
 			}
+			requestMethod := ""
+			requestURL := ""
+			if stream := c.Stream(); stream != nil {
+				requestMethod = stream.Protocol()
+				if data, err := c.Data(""); err == nil {
+					if method, url := extractHTTPRequestInfo(data, stream); method != "" {
+						requestMethod = method
+						requestURL = url
+					}
+				}
+			}
 			response.Results = append(response.Results, struct {
-				Stream *index.Stream
-				Tags   []string
+				Stream        *index.Stream
+				Tags          []string
+				RequestMethod string
+				RequestURL    string
 			}{
-				Stream: c.Stream(),
-				Tags:   tags,
+				Stream:        c.Stream(),
+				Tags:          tags,
+				RequestMethod: requestMethod,
+				RequestURL:    requestURL,
 			})
 			return nil
 		}, manager.Limit(100, page), manager.PrefetchAllTags())

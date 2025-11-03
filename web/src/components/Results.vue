@@ -159,6 +159,36 @@
         </v-tooltip>
       </div>
     </ToolBar>
+    <v-dialog
+      v-model="showHelpDialog"
+      scrollable
+      max-width="960"
+    >
+      <v-card class="help-dialog-card">
+        <v-card-title class="d-flex align-center">
+          <span class="text-h6">帮助</span>
+          <v-spacer />
+          <v-btn icon variant="text" @click="showHelpDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="help-dialog-content">
+          <HelpContent />
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+    <v-btn
+      class="help-fab"
+      color="primary"
+      size="large"
+      variant="elevated"
+      icon
+      aria-label="打开帮助"
+      @click="showHelpDialog = true"
+    >
+      <v-icon>mdi-help-circle-outline</v-icon>
+    </v-btn>
     <v-skeleton-loader
       v-if="streams.running || (!streams.result && !streams.error)"
       type="table-thead, table-tbody"
@@ -201,6 +231,8 @@
             <th class="text-left">Bytes</th>
             <th class="text-left">Server</th>
             <th class="text-left">Bytes</th>
+            <th class="text-left">Method</th>
+            <th class="text-left">URL</th>
             <th class="text-right">Duration</th>
             <th class="text-right pr-0">Time</th>
             <th style="width: 0" class="px-0"></th>
@@ -282,6 +314,18 @@
                   })
                 }}</span>
               </td>
+              <td class="method-cell">
+                {{ formatRequestMethod(stream.Stream.Protocol, stream.RequestMethod) }}
+              </td>
+              <td class="url-cell">
+                <span
+                  v-if="displayRequestURL(stream.RequestURL)"
+                  :title="stream.RequestURL || undefined"
+                >
+                  {{ displayRequestURL(stream.RequestURL) }}
+                </span>
+                <span v-else>—</span>
+              </td>
               <td class="text-right">
                 {{
                   formatDateDifference(
@@ -318,14 +362,7 @@
 import { EventBus } from "./EventBus";
 import { useRootStore } from "@/stores";
 import { useStreamsStore } from "@/stores/streams";
-import {
-  computed,
-  onMounted,
-  onBeforeUnmount,
-  nextTick,
-  ref,
-  watch,
-} from "vue";
+import { computed, onMounted, onBeforeUnmount, nextTick, ref, watch } from "vue";
 import { RouterLink } from "vue-router";
 import { useRoute, useRouter } from "vue-router";
 import { Result } from "@/apiClient";
@@ -338,12 +375,14 @@ import {
 } from "@/filters";
 import { getContrastTextColor } from "@/lib/colors";
 import prettyBytes from "pretty-bytes";
+import HelpContent from "./HelpContent.vue";
 
 const store = useRootStore();
 const route = useRoute();
 const router = useRouter();
 const streams = useStreamsStore();
 const selected = ref<boolean[]>([]);
+const showHelpDialog = ref(false);
 const tags = computed(() => store.tags);
 const groupedTags = computed(() => store.groupedTags);
 const selectedCount = computed(
@@ -386,6 +425,21 @@ const currentStream = computed(() => {
     ? parseInt(route.params.streamId.toString(), 10)
     : null;
 });
+
+function formatRequestMethod(protocol: string, method?: string) {
+  if (method && method.length > 0) {
+    return method;
+  }
+  return protocol;
+}
+
+function displayRequestURL(url?: string) {
+  if (!url || url.length === 0) return "";
+  if (url.length > 120) {
+    return url.slice(0, 117) + "...";
+  }
+  return url;
+}
 
 watch(
   () => currentStream.value,
@@ -521,5 +575,38 @@ function regexEscape(text: string) {
 }
 tr.selected td {
   background: rgba(var(--v-theme-primary), var(--v-border-opacity));
+}
+.method-cell {
+  width: 90px;
+  white-space: nowrap;
+}
+.url-cell {
+  max-width: 320px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.help-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 6;
+}
+
+@media (max-width: 600px) {
+  .help-fab {
+    right: 16px;
+    bottom: 16px;
+  }
+}
+
+.help-dialog-card {
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.help-dialog-content {
+  overflow-y: auto;
 }
 </style>

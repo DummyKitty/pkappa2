@@ -52,7 +52,11 @@ export function isSearchResult(obj: unknown): obj is SearchResult {
             Array.isArray(e["Tags"]) &&
             e["Tags"].every((e: any) =>
                 typeof e === "string"
-            )
+            ) &&
+            (typeof e["RequestMethod"] === "undefined" ||
+                typeof e["RequestMethod"] === "string") &&
+            (typeof e["RequestURL"] === "undefined" ||
+                typeof e["RequestURL"] === "string")
         ) &&
         typeof typedObj["Elapsed"] === "number" &&
         typeof typedObj["Offset"] === "number" &&
@@ -127,7 +131,11 @@ export function isStreamData(obj: unknown): obj is StreamData {
         typedObj["Converters"].every((e: any) =>
             typeof e === "string"
         ) &&
-        typeof typedObj["ActiveConverter"] === "string"
+        typeof typedObj["ActiveConverter"] === "string" &&
+        (typeof typedObj["RequestMethod"] === "undefined" ||
+            typeof typedObj["RequestMethod"] === "string") &&
+        (typeof typedObj["RequestURL"] === "undefined" ||
+            typeof typedObj["RequestURL"] === "string")
     )
 }
 

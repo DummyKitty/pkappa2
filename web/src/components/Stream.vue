@@ -246,6 +246,36 @@
         </v-tooltip>
       </div>
     </ToolBar>
+    <v-dialog
+      v-model="showHelpDialog"
+      scrollable
+      max-width="960"
+    >
+      <v-card class="help-dialog-card">
+        <v-card-title class="d-flex align-center">
+          <span class="text-h6">帮助</span>
+          <v-spacer />
+          <v-btn icon variant="text" @click="showHelpDialog = false">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="help-dialog-content">
+          <HelpContent />
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+    <v-btn
+      class="help-fab"
+      color="primary"
+      size="large"
+      variant="elevated"
+      icon
+      aria-label="打开帮助"
+      @click="showHelpDialog = true"
+    >
+      <v-icon>mdi-help-circle-outline</v-icon>
+    </v-btn>
     <v-skeleton-loader
       v-if="
         stream.running ||
@@ -421,14 +451,12 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import {
-  registerSelectionListener,
-  destroySelectionListener,
-} from "./streamSelector";
+import { registerSelectionListener, destroySelectionListener } from "./streamSelector";
 import { formatDate, formatDateLong, tagify } from "@/filters";
 import { getContrastTextColor } from "@/lib/colors";
 import prettyBytes from "pretty-bytes";
 import { CYBERCHEF_URL } from "@/lib/constants";
+import HelpContent from "./HelpContent.vue";
 
 const store = useRootStore();
 const route = useRoute();
@@ -439,6 +467,7 @@ const selectionQuery = ref("");
 const streamData = ref<HTMLElement | null>(null);
 const urlDecode = ref(false);
 const cardsViewMode = ref("cards");
+const showHelpDialog = ref(false);
 
 if (localStorage.streamPresentation) {
   presentation.value = localStorage.getItem("streamPresentation") ?? "ascii";
@@ -656,3 +685,29 @@ function toggleExpand() {
   void router.replace({ query });
 }
 </script>
+
+<style scoped>
+.help-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 6;
+}
+
+@media (max-width: 600px) {
+  .help-fab {
+    right: 16px;
+    bottom: 16px;
+  }
+}
+
+.help-dialog-card {
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.help-dialog-content {
+  overflow-y: auto;
+}
+</style>

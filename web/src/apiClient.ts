@@ -38,6 +38,8 @@ export type Stream = {
 export type Result = {
   Stream: Stream;
   Tags: string[];
+  RequestMethod?: string;
+  RequestURL?: string;
 };
 
 /** @see {isError} ts-auto-guard:type-guard */
@@ -77,6 +79,8 @@ export type StreamData = {
   Tags: string[];
   Converters: string[];
   ActiveConverter: string;
+  RequestMethod?: string;
+  RequestURL?: string;
 };
 
 /** @see {isStatistics} ts-auto-guard:type-guard */

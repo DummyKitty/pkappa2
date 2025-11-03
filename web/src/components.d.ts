@@ -14,6 +14,7 @@ declare module 'vue' {
     CTFWizardDialog: typeof import('./components/CTFWizardDialog.vue')['default']
     ErrorBanner: typeof import('./components/ErrorBanner.vue')['default']
     Graph: typeof import('./components/Graph.vue')['default']
+    HelpContent: typeof import('./components/HelpContent.vue')['default']
     Home: typeof import('./components/Home.vue')['default']
     Navigation: typeof import('./components/Navigation.vue')['default']
     PcapOverIP: typeof import('./components/PcapOverIP.vue')['default']
